@@ -64,6 +64,9 @@ class RuleEngine:
         self.rules = rules or build_default_rules()
         self._task: asyncio.Task | None = None
 
+    def update_rules(self, rules: list) -> None:
+        self.rules = rules
+
     async def start(self) -> None:
         if self._task is None:
             self._task = asyncio.create_task(self._run())

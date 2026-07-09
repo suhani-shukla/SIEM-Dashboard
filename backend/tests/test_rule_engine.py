@@ -9,7 +9,6 @@ from sqlalchemy import select
 from app.main import app
 from app.models.alert import Alert as AlertRecord
 
-
 @pytest.fixture
 async def fake_redis(monkeypatch):
     client = FakeRedis(decode_responses=True)
@@ -20,14 +19,14 @@ async def fake_redis(monkeypatch):
     monkeypatch.setattr("app.core.redis.get_redis_client", _get_redis_client)
     yield client
     await client.aclose()
-
+'''
 
 @pytest.fixture
 async def client(fake_redis):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-
+'''
 
 @pytest.mark.asyncio
 async def test_burst_of_events_creates_alert_row(client, db_session, fake_redis):
