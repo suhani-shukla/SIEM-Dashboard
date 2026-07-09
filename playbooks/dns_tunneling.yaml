@@ -1,0 +1,16 @@
+name: dns_tunneling_detection
+description: Detects a high volume of unique DNS query subdomains pointing to DNS tunneling behavior.
+mitre_attack:
+  technique_id: T1071.004
+  technique_name: Application Layer Protocol
+  tactic: Command and Control
+rule_type: aggregation
+enabled: true
+match:
+  event_type: dns_query
+threshold:
+  count: 30
+  window_seconds: 60
+  group_by: source_ip
+aggregate_field: raw_payload.query_domain
+severity: medium

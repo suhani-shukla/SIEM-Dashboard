@@ -1,0 +1,15 @@
+name: brute_force_detection
+description: Detects repeated authentication failures from a single source
+mitre_attack:
+  technique_id: T1110
+  technique_name: Brute Force
+  tactic: Credential Access
+rule_type: threshold
+enabled: true
+match:
+  event_type: auth_failure
+threshold:
+  count: 5
+  window_seconds: 120
+  group_by: source_ip
+severity: high

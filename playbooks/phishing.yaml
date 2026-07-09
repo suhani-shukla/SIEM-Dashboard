@@ -1,0 +1,18 @@
+name: phishing_detection
+description: Detects phishing sequence from email receipt to link click and credential submission.
+mitre_attack:
+  technique_id: T1566
+  technique_name: Phishing
+  tactic: Initial Access
+rule_type: sequence
+enabled: true
+steps:
+  - event_type: email_received
+    raw_payload.suspicious_link: true
+  - event_type: link_clicked
+  - event_type: credential_submitted
+    raw_payload.external_domain: true
+threshold:
+  window_seconds: 600
+  group_by: user
+severity: critical
