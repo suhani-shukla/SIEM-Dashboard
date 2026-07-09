@@ -22,3 +22,6 @@ test:
 
 test-rules:
     docker compose exec api pytest -v tests/test_rules.py tests/test_rule_engine.py
+
+test-playbooks:
+    docker compose exec api pytest -v tests/test_playbooks.py
