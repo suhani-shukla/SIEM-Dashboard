@@ -1,4 +1,4 @@
-# SIEM Dashboard — development commands
+# SIEM Dashboard â€” development commands
 
 set dotenv-load
 
@@ -25,3 +25,13 @@ test-rules:
 
 test-playbooks:
     docker compose exec api pytest -v tests/test_playbooks.py
+
+test-api:
+    docker compose exec api pytest tests/test_alerts.py -v
+
+watch-alerts:
+    curl -N http://localhost:8000/api/v1/alerts/stream
+
+# Manually watch the live alert feed from your terminal
+watch-alerts:
+    curl -N http://localhost:8000/api/v1/alerts/stream

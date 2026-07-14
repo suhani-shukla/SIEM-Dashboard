@@ -63,7 +63,7 @@ async def list_events(
     total = total_result.scalar_one()
 
     return {
-        "items": [EventResponse.model_validate(r) for r in rows],
+        "items": [EventResponse.from_orm_event(r) for r in rows],
         "total": total,
         "limit": limit,
         "offset": offset,

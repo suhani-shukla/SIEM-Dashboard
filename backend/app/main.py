@@ -7,14 +7,20 @@ from sqlalchemy import text
 
 from app.api.v1.router import router as v1_router
 from app.core import redis as redis_core
-from app.db.session import engine
+from app.db.session import engine, async_session_factory
 from app.rules.engine import RuleEngine
-
+from app.playbooks.loader import load_playbooks
+import logging
+logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis_client = await redis_core.get_redis_client()
-    app.state.rule_engine = RuleEngine(redis_client=redis_client)
+    
+    async with async_session_factory() as session:
+        rules = await load_playbooks(session)
+        
+    app.state.rule_engine = RuleEngine(redis_client=redis_client, rules=rules)
     await app.state.rule_engine.start()
     yield
     await app.state.rule_engine.stop()
@@ -23,7 +29,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SIEM Dashboard API", version="0.1.0", lifespan=lifespan)
-app.include_router(v1_router)
+app.include_router(v1_router, prefix="/api/v1")
+
+# in app/main.py, near your FastAPI() app creation
+from fastapi import HTTPException, Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if isinstance(exc.detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 @app.exception_handler(RequestValidationError)

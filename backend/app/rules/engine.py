@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 
 from redis.asyncio import Redis
 
@@ -12,6 +13,8 @@ from app.rules.aggregation import AggregationRule
 from app.rules.base import Alert, alert_to_record_kwargs
 from app.rules.sequence import SequenceRule
 from app.rules.threshold import ThresholdRule
+
+logger = logging.getLogger("rule_engine")
 
 ALERTS_NEW_CHANNEL = "alerts:new"
 
@@ -70,11 +73,11 @@ class RuleEngine:
     async def start(self) -> None:
         if self._task is None:
             self._task = asyncio.create_task(self._run())
+            logger.info("RuleEngine started with %d rules", len(self.rules))
 
     async def stop(self) -> None:
         if self._task is None:
             return
-
         self._task.cancel()
         try:
             await self._task
@@ -86,35 +89,48 @@ class RuleEngine:
     async def _run(self) -> None:
         pubsub = self.redis_client.pubsub()
         await pubsub.subscribe(EVENTS_RAW_CHANNEL)
+        logger.info("RuleEngine subscribed to %s", EVENTS_RAW_CHANNEL)
         try:
             while True:
                 message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message is None:
                     await asyncio.sleep(0.05)
                     continue
-
                 if message.get("type") != "message":
                     continue
-
                 payload = message.get("data")
                 if not payload:
                     continue
-
-                event = json.loads(payload)
-                await self._process_event(event)
+                try:
+                    event = json.loads(payload)
+                    await self._process_event(event)
+                except Exception:
+                    logger.exception("Failed to process event: %r", payload)
         finally:
             await pubsub.unsubscribe(EVENTS_RAW_CHANNEL)
             await pubsub.aclose()
+            logger.info("RuleEngine stopped")
 
     async def _process_event(self, event: dict) -> None:
         for rule in self.rules:
+            logger.info(
+                "Evaluating rule=%s match=%s against event=%s",
+                rule.rule_name,
+                getattr(rule, "match_criteria", None),
+                event,
+            )
             alert = await rule.evaluate(event, self.redis_client)
             if alert is None:
+                logger.info("Rule %s did not fire", rule.rule_name)
                 continue
+            logger.info("Rule %s fired: %s", rule.rule_name, alert.summary)
             await self._persist_alert(alert)
-            await self.redis_client.publish(ALERTS_NEW_CHANNEL, alert.model_dump_json())
 
     async def _persist_alert(self, alert: Alert) -> None:
         async with async_session_factory() as session:
             session.add(AlertRecord(**alert_to_record_kwargs(alert)))
             await session.commit()
+        try:
+            await self.redis_client.publish(ALERTS_NEW_CHANNEL, alert.model_dump_json())
+        except Exception:
+            logger.exception("Failed to publish alert %s to %s", alert.id, ALERTS_NEW_CHANNEL)
