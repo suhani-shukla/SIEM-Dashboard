@@ -14,5 +14,5 @@ steps:
     raw_payload.external_domain: true
 threshold:
   window_seconds: 600
-  group_by: user
+  group_by: raw_payload.user
 severity: critical

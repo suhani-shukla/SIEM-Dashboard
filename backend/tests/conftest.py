@@ -12,7 +12,13 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 from app.db.session import get_db
-from app.main import app
+from app.main import app as fastapi_app
+
+
+@pytest.fixture
+def app():
+    """Expose the FastAPI app instance as an injectable fixture named `app`."""
+    return fastapi_app
 
 
 @pytest_asyncio.fixture
@@ -41,6 +47,7 @@ async def db_engine():
 @pytest_asyncio.fixture
 async def db_session() -> AsyncSession:
     from app.db.session import async_session_factory
+
     async with async_session_factory() as session:
         yield session
 
@@ -64,15 +71,12 @@ async def client(redis_client, db_session):
     async def _override_get_db():
         yield db_session
 
-    app.dependency_overrides[get_db] = _override_get_db
-
+    fastapi_app.dependency_overrides[get_db] = _override_get_db
     port = _free_port()
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, lifespan="on", log_level="warning")
+    config = uvicorn.Config(fastapi_app, host="127.0.0.1", port=port, lifespan="on", log_level="warning")
     server = uvicorn.Server(config)
     server.install_signal_handlers = lambda: None  # not the main thread's job in tests
-
     server_task = asyncio.create_task(server.serve())
-
     for _ in range(200):
         if server.started:
             break
@@ -80,13 +84,11 @@ async def client(redis_client, db_session):
     else:
         server_task.cancel()
         raise RuntimeError("uvicorn test server failed to start")
-
     async with AsyncClient(base_url=f"http://127.0.0.1:{port}") as ac:
         yield ac
-
     server.should_exit = True
     await server_task
-    app.dependency_overrides.clear()
+    fastapi_app.dependency_overrides.clear()
 
 
 @pytest.fixture(autouse=True)

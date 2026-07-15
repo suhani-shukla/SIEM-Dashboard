@@ -1,8 +1,8 @@
 name: privilege_escalation_detection
 description: Detects failed permission access followed closely by privilege escalation.
 mitre_attack:
-  technique_id: T1068
-  technique_name: Exploitation for Privilege Escalation
+  technique_id: T1078
+  technique_name: Valid Accounts
   tactic: Privilege Escalation
 rule_type: sequence
 enabled: true
@@ -13,5 +13,5 @@ steps:
     raw_payload.new_privilege: admin
 threshold:
   window_seconds: 300
-  group_by: user
+  group_by: raw_payload.user
 severity: critical

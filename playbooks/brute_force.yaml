@@ -11,5 +11,6 @@ match:
 threshold:
   count: 5
   window_seconds: 120
-  group_by: source_ip
+  group_by: raw_payload.source_ip
+
 severity: high

@@ -11,6 +11,6 @@ match:
 threshold:
   count: 30
   window_seconds: 60
-  group_by: source_ip
-aggregate_field: raw_payload.query_domain
+  group_by: raw_payload.source_ip
+aggregate_field: raw_payload.subdomain_label
 severity: medium
