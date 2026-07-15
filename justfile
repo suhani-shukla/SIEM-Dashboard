@@ -29,9 +29,16 @@ test-playbooks:
 test-api:
     docker compose exec api pytest tests/test_alerts.py -v
 
-watch-alerts:
-    curl -N http://localhost:8000/api/v1/alerts/stream
 
 # Manually watch the live alert feed from your terminal
 watch-alerts:
     curl -N http://localhost:8000/api/v1/alerts/stream
+
+simulate attack="brute_force" mode="fast" noise="20":
+    docker compose exec api python scripts/simulate.py --attack {{attack}} --mode {{mode}} --noise {{noise}}
+
+simulate-all:
+    docker compose exec api python scripts/simulate.py --attack all --mode fast --noise 15
+
+test-e2e:
+    docker compose exec api pytest tests/test_e2e.py -v -s
