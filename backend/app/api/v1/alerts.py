@@ -12,7 +12,6 @@ ASSUMPTION: app.core.redis exposes `get_redis()` as a FastAPI dependency
 that yields an async redis client (matching your Phase 1/2 setup where the
 rule engine publishes fired alerts to the "alerts:new" channel).
 """
-import asyncio
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -88,16 +87,21 @@ async def stream_alerts(request: Request, redis_client=Depends(get_redis)):
                 if await request.is_disconnected():
                     break
 
-                try:
-                    message = await asyncio.wait_for(
-                        pubsub.get_message(ignore_subscribe_messages=True),
-                        timeout=KEEPALIVE_SECONDS,
-                    )
-                except asyncio.TimeoutError:
-                    yield ": keepalive\n\n"
-                    continue
+                # NOTE: timeout is passed directly to get_message() so the
+                # call itself blocks server-side for up to KEEPALIVE_SECONDS.
+                # Previously this was wrapped in asyncio.wait_for() with no
+                # timeout passed to get_message() itself, which defaults to
+                # 0.0 (non-blocking). That made get_message() return almost
+                # instantly every time, so wait_for's timeout was never
+                # actually hit -- producing a tight busy-loop that emitted
+                # neither keepalives nor alert data in any reliable way.
+                message = await pubsub.get_message(
+                    ignore_subscribe_messages=True,
+                    timeout=KEEPALIVE_SECONDS,
+                )
 
                 if message is None:
+                    yield ": keepalive\n\n"
                     continue
 
                 data = message["data"]

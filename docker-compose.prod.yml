@@ -1,0 +1,24 @@
+# FILE LOCATION: docker-compose.prod.yml (project root)
+#
+# Production overlay: builds the frontend as a static bundle served by
+# nginx (which also reverse-proxies /api to the api service, including
+# correct SSE handling — see frontend/nginx.conf), instead of running the
+# Vite dev server. The api service also drops --reload for a real process
+# rather than a file-watching dev server.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  api:
+    volumes: []  # don't bind-mount source in prod — use the built image as-is
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+
+  frontend:
+    build:
+      context: ./frontend
+      target: prod
+    ports:
+      - "80:80"
+    volumes: []
+    environment: {}

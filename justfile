@@ -42,3 +42,12 @@ simulate-all:
 
 test-e2e:
     docker compose exec api pytest tests/test_e2e.py -v -s
+frontend-install:
+    docker compose exec frontend npm install
+
+demo:
+    just up
+    just migrate
+    just simulate-all
+    @echo ""
+    @echo "✅ Demo ready — open http://localhost:5173"

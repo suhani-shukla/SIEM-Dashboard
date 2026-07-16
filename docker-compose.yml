@@ -1,59 +1,78 @@
+# FILE LOCATION: docker-compose.yml (project root — replace/merge with your existing one)
+#
+# DESIGN NOTE: the original spec listed a separate "worker" service, but the
+# actual Phase 2 implementation runs the rule engine as an asyncio background
+# task inside the "api" process (subscribing to Redis pub/sub on startup),
+# not as a separate container. That's a valid simpler architecture for this
+# project's scale — no code changes needed here to match the original spec's
+# service list exactly. If you ever want to split correlation into its own
+# scaled-independently worker process, that's a bigger refactor, not part of
+# Phase 6's scope.
+#
+# This file is the DEV configuration: frontend runs via the Vite dev server
+# with hot reload. See docker-compose.prod.yml for the nginx/static-build
+# production setup.
+
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
-      POSTGRES_USER: siem
-      POSTGRES_PASSWORD: siem
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: siem
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U siem -d siem"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
     ports:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   api:
     build:
       context: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/siem
+      REDIS_URL: redis://redis:6379/0
+      SIMULATION_API_BASE_URL: http://localhost:8000
     volumes:
       - ./backend:/app
-      - ./playbooks:/playbooks
-    ports:
-      - "${API_PORT:-8000}:8000"
-    environment:
-      DATABASE_URL: postgresql+asyncpg://siem:siem@postgres:5432/siem
-      REDIS_URL: redis://redis:6379/0
+      - ./playbooks:/app/playbooks
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
       context: ./frontend
-    command: npm run dev -- --host 0.0.0.0 --port 5173
+      target: dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: /api
+      VITE_DEV_API_PROXY_TARGET: http://api:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "${FRONTEND_PORT:-5173}:5173"
-    environment:
-      VITE_API_URL: http://localhost:${API_PORT:-8000}
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

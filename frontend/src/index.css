@@ -1,7 +1,39 @@
+/* FILE LOCATION: frontend/src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+html, body, #root {
+  height: 100%;
+}
+
 body {
-  @apply bg-slate-950 text-slate-100 min-h-screen;
+  @apply bg-base-bg text-ink-primary font-sans antialiased;
+}
+
+::selection {
+  @apply bg-brand/30 text-ink-primary;
+}
+
+/* thin, unobtrusive scrollbars fit a dense data-tool aesthetic */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-base-hover rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-base-border-strong;
+}
+
+:focus-visible {
+  @apply outline-none ring-2 ring-brand/70 ring-offset-2 ring-offset-base-bg;
+}
+
+.mono-tabular {
+  font-variant-numeric: tabular-nums;
 }
