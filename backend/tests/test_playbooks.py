@@ -16,7 +16,7 @@ from asgi_lifespan import LifespanManager
 
 
 @pytest.fixture
-async def client(fake_redis, db_session):
+async def client(redis_client, db_session):
     async def _override_get_db():
         yield db_session
 
@@ -51,7 +51,7 @@ async def test_playbook_api_patch(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_brute_force_playbook_fires(client, db_session, fake_redis):
+async def test_brute_force_playbook_fires(client, db_session, redis_client):
     base = datetime.now(timezone.utc)
     
     # Needs 5 events to fire (playbook threshold is 5)
@@ -70,7 +70,7 @@ async def test_brute_force_playbook_fires(client, db_session, fake_redis):
     from app.rules.engine import RuleEngine
     # Load actual playbooks to test them
     rules = await load_playbooks(db_session)
-    engine = RuleEngine(redis_client=fake_redis, rules=rules)
+    engine = RuleEngine(redis_client=redis_client, rules=rules)
 
     for payload in payloads:
         response = await client.post("/api/v1/events", json=payload)

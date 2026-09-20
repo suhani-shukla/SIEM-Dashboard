@@ -12,7 +12,12 @@ from app.rules.threshold import ThresholdRule
 from app.rules.sequence import SequenceRule
 from app.rules.aggregation import AggregationRule
 
-PLAYBOOKS_DIR = Path(__file__).parent.parent.parent.parent / "playbooks"
+_CONTAINER_PLAYBOOKS_DIR = Path("/app/playbooks")
+PLAYBOOKS_DIR = (
+    _CONTAINER_PLAYBOOKS_DIR
+    if _CONTAINER_PLAYBOOKS_DIR.exists()
+    else Path(__file__).parent.parent.parent.parent / "playbooks"
+)
 
 
 async def load_playbooks(db: AsyncSession) -> list[Rule]:

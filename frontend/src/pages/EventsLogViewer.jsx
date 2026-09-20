@@ -1,5 +1,5 @@
 // FILE LOCATION: frontend/src/pages/EventsLogViewer.jsx
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { api } from "../api/client";
@@ -92,7 +92,7 @@ export default function EventsLogViewer() {
                 {data.items.map((ev) => {
                   const expanded = expandedId === ev.id;
                   return (
-                    <>
+                    <Fragment key={ev.id}>
                       <tr
                         key={ev.id}
                         onClick={() => setExpandedId(expanded ? null : ev.id)}
@@ -115,7 +115,7 @@ export default function EventsLogViewer() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
